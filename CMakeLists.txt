@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 # compiler warning/error flags
-set(COVERAGE_COMPILE_FLAGS "-Wall -Wextra -Wconversion -pedantic -Werror=return-type")
+set(COVERAGE_COMPILE_FLAGS "-Wall -Wextra -pedantic -Werror=return-type")
 
 # release optimization
 set(CMAKE_CXX_FLAGS "-Ofast -DNDEBUG")
@@ -17,6 +17,13 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILE_FLAGS} -fopenmp -m64 -march=native -flto")
 # debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${COVERAGE_COMPILE_FLAGS} -fopenmp -m64")
+
+# use libc++ library if using clang++ compiler.
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_definitions(-DUSE_CLANG_COMPILER) # 添加 USE_CLANG_COMPILER 宏定义.注意添加宏的语法是 -Dmacro.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++") # 使用 llvm 的 libc++ 标准库
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -stdlib=libc++")
+endif ()
 
 # git submodule init
 find_package(Git QUIET)
@@ -37,6 +44,9 @@ file(GLOB self_source_file "src/*.cpp" "src/include/*.h")
 file(GLOB test_source_file "test/*.cpp" "test/*.h")
 file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
+# require libraries
+set(REQUIRE_LIBS -pthread)
+
 # benchmark/gtest setting
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
 add_subdirectory(third-party/google/benchmark)
@@ -54,10 +64,10 @@ unset(BENCHMARK CACHE)
 
 # create executable
 if (TEST)
-    add_executable("${PROJECT_NAME}-test" ${self_source_file} ${test_source_file})
-    target_link_libraries("${PROJECT_NAME}-test" gtest gtest_main)
+    add_executable("${PROJECT_NAME}_test" ${self_source_file} ${test_source_file})
+    target_link_libraries("${PROJECT_NAME}_test" gtest gtest_main ${REQUIRE_LIBS})
 ENDIF ()
 if (BENCHMARK)
-    add_executable("${PROJECT_NAME}-benchmark" ${self_source_file} ${benchmark_source_file})
-    target_link_libraries("${PROJECT_NAME}-benchmark" benchmark)
+    add_executable("${PROJECT_NAME}_benchmark" ${self_source_file} ${benchmark_source_file})
+    target_link_libraries("${PROJECT_NAME}_benchmark" benchmark ${REQUIRE_LIBS})
 ENDIF ()
