@@ -46,10 +46,9 @@
 
 namespace networks_cpp {
     // forward declaration
-    template<auto type,
-            typename Vertex,
-            template<typename/*Vertex*/, typename WeightType> typename Edge,
-            typename WeightType>
+    template<typename Vertex,
+            typename WeightType,
+            auto type>
     class Graph;
 
     enum class GraphType : uint32_t;

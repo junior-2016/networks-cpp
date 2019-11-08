@@ -1,9 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
-project(networks_cpp)
+
+# append other cmake module
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+# include GetVersion Module
+include(GetVersion)
 
 # c++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
+
+project(networks_cpp VERSION ${DETECTED_VERSION} LANGUAGES CXX)
 
 # compiler warning/error flags
 set(COVERAGE_COMPILE_FLAGS "-Wall -Wextra -pedantic -Werror=return-type")
