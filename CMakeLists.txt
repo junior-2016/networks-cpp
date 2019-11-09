@@ -34,34 +34,21 @@ endif ()
 
 # git submodule init
 find_package(Git QUIET)
-if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    if (GIT_SUBMODULE)
-        message(STATUS "Submodule Init")
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                RESULT_VARIABLE GIT_SUBMOD_RESULT)
-        if (NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-        endif ()
-    endif ()
+message(STATUS "Submodule Init")
+execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+if (NOT GIT_SUBMOD_RESULT EQUAL "0")
+    message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
 endif ()
-
-# find boost library
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
-find_package(Boost REQUIRED)
 
 # source file path
 file(GLOB self_source_file "src/*.cpp" "src/include/*.h")
 file(GLOB test_source_file "test/*.cpp" "test/*.h")
 file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
-# include directories
-include_directories(${Boost_INCLUDE_DIRS})
-
 # require libraries
-set(REQUIRE_LIBS ${Boost_LIBRARIES} -pthread)
+set(REQUIRE_LIBS -pthread)
 
 # benchmark/gtest setting
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)

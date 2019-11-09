@@ -14,6 +14,7 @@
 
 // C++ std include
 #include <vector>
+#include <list>
 #include <map>
 #include <unordered_map>
 #include <set>
@@ -43,8 +44,7 @@
 #include <cassert>
 
 // third-party include
-#include <boost/graph/graph_traits.hpp>
-#include <boost/graph/adjacency_list.hpp>
+
 
 namespace networks_cpp {
     // forward declaration
@@ -59,6 +59,8 @@ namespace networks_cpp {
     using Vector = std::vector<T>;
     template<typename T, size_t num>
     using Array = std::array<T, num>;
+    template<typename T>
+    using List = std::list<T>;
 
     template<typename K,
             typename V,
