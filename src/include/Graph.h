@@ -86,11 +86,8 @@ namespace networks_cpp {
          *   如果是第一次插入key,bool为true.
          */
         inline void insert_edge_arc(VertexIdType begin_id, const Vertex &end, WeightType weight) {
-            if (begin_id >= adjacency_matrix.size()) {
-                adjacency_matrix.emplace_back(Adjacency_list_type{{end, weight}});
-            } else {
-                auto ret = adjacency_matrix[begin_id].try_emplace(end, weight);
-                if (ret.second == false) (*ret.first).second += weight;
+            if (auto ret = adjacency_matrix[begin_id].try_emplace(end, weight);ret.second == false) {
+                (*ret.first).second += weight;
             }
         }
 
@@ -123,13 +120,24 @@ namespace networks_cpp {
          */
         inline VertexIdType add_vertex(const Vertex &v) {
             auto ret = vertices.try_emplace(v, global_vertex_id);
-            if (ret.second == true) global_vertex_id++;
+            if (ret.second == true) { // 插入新顶点,需要创建新的Adjacency list,同时更新global_vertex_id;
+                adjacency_matrix.emplace_back(Adjacency_list_type{});
+                global_vertex_id++;
+            }
             return (*ret.first).second;
         }
 
     public:
-        explicit Graph(std::string graph_name = "anonymous_graph")
-                : n(0), m(0), graph_name(std::move(graph_name)), global_vertex_id(0) {}
+        /**
+         * 创建图
+         * @param vertex_reserve_number 预设的顶点数量大小,用于提前分配内存,避免后期频繁扩容.
+         * @param graph_name
+         */
+        explicit Graph(std::string graph_name = "anonymous_graph", size_t vertex_reserve_number = 20)
+                : n(0), m(0), graph_name(std::move(graph_name)), global_vertex_id(0) {
+            vertices.reserve(vertex_reserve_number);
+            adjacency_matrix.reserve(vertex_reserve_number);
+        }
 
         void add_edge(const Vertex &begin, const Vertex &end, WeightType weight) {
             auto begin_id = add_vertex(begin);
