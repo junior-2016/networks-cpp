@@ -46,13 +46,22 @@ if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif ()
 endif ()
 
+# find boost library
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Boost REQUIRED)
+
 # source file path
 file(GLOB self_source_file "src/*.cpp" "src/include/*.h")
 file(GLOB test_source_file "test/*.cpp" "test/*.h")
 file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
+# include directories
+include_directories(${Boost_INCLUDE_DIRS})
+
 # require libraries
-set(REQUIRE_LIBS -pthread)
+set(REQUIRE_LIBS ${Boost_LIBRARIES} -pthread)
 
 # benchmark/gtest setting
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)

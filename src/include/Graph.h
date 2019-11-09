@@ -5,8 +5,6 @@
 #ifndef NETWORKS_CPP_GRAPH_H
 #define NETWORKS_CPP_GRAPH_H
 
-#include <utility>
-
 #include "networks-cpp.h"
 
 namespace networks_cpp {
@@ -15,6 +13,8 @@ namespace networks_cpp {
         directed = 2,
     };
 
+    // TODO 图的多重邻接链表其实可以整合为一个列表,用 compressed sparse row(csr) 表示.
+    //  其实就是稀疏邻接矩阵的csr表示. 所以优化点在于稀疏矩阵csr表示的优化,可以弄到多核cpu(intel mkl)/GPU(CUDA),可以考虑用开源的库处理.
     template<typename Vertex,
             typename WeightType,
             auto type>
@@ -103,6 +103,10 @@ namespace networks_cpp {
             insert_edge(begin, end, weight);
         }
 
+        [[nodiscard]] inline constexpr size_t vertex_number() const { return n; }
+
+        [[nodiscard]] inline constexpr size_t edge_number() const { return m; }
+
         void print() const {
             if (n > 20) {
                 std::cerr << "print() only for small graph. Your graph is too large.\n";
@@ -110,8 +114,8 @@ namespace networks_cpp {
             }
             std::cout << "{\n";
             std::cout << "\tname: " << graph_name << "\n";
-            std::cout << "\tn: " << n << "\n";
-            std::cout << "\tm: " << m << "\n";
+            std::cout << "\tvertex number: " << n << "\n";
+            std::cout << "\tedge number: " << m << "\n";
             if constexpr (type == GraphType::undirected) { std::cout << "\ttype: undirected graph\n"; }
             else { std::cout << "\ttype: directed graph\n"; }
             std::cout << "\tedges: \n";
