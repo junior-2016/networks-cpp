@@ -5,29 +5,29 @@
 #include "../third-party/google/googletest/googletest/include/gtest/gtest.h"
 #include "../src/include/Graph.h"
 
-template<auto type>
-void set_edge(networks_cpp::Graph<std::string, int, type> &graph) {
-    graph.add_edge("v1", "v2", 1);
-    graph.add_edge("v1", "v2", 10);
-    graph.add_edge("v1", "v3", 2);
-    graph.add_edge("v3", "v1", 4);
-    graph.add_edge("v2", "v2", 7);
-    graph.add_edge("v2", "v2", 17);
-    graph.add_edge("v2", "v3", 5);
-}
-
-TEST(GraphTest, GraphPrint) {
-    using namespace networks_cpp;
-    Graph<std::string, int, GraphType::directed> graph1("one");
-    Graph<std::string, int, GraphType::undirected> graph2("second");
-    set_edge(graph1);
-    set_edge(graph2);
-    std::cout << graph1;
-    std::cout << graph2;
-    af::array a = graph1.convert_to_csr_storage();
-    af_print(a);
-    af_print(dense(a));
-}
+//template<auto type>
+//void set_edge(networks_cpp::Graph<std::string, int, type> &graph) {
+//    graph.add_edge("v1", "v2", 1);
+//    graph.add_edge("v1", "v2", 10);
+//    graph.add_edge("v1", "v3", 2);
+//    graph.add_edge("v3", "v1", 4);
+//    graph.add_edge("v2", "v2", 7);
+//    graph.add_edge("v2", "v2", 17);
+//    graph.add_edge("v2", "v3", 5);
+//}
+//
+//TEST(GraphTest, GraphPrint) {
+//    using namespace networks_cpp;
+//    Graph<std::string, int, GraphType::directed> graph1("one");
+//    Graph<std::string, int, GraphType::undirected> graph2("second");
+//    set_edge(graph1);
+//    set_edge(graph2);
+//    std::cout << graph1;
+//    std::cout << graph2;
+//    af::array a = graph1.convert_to_csr_storage();
+//    af_print(a);
+//    af_print(dense(a));
+//}
 
 constexpr size_t v_size = 1000000, e_size = v_size * 10;
 using Vertex = int_fast32_t;

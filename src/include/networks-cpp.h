@@ -46,7 +46,11 @@
 #include <cassert>
 
 // third-party include
-#include <arrayfire.h>
+// ArrayFire Library
+#include <arrayfire.h> // TODO: 另外一个gpu稀疏矩阵处理框架 cusp + thrust 也可以考虑测试一下.
+
+// parallel_hashmap use std::hash as default (other choice is absl::Hash but you should include abseil framework)
+#include "../../third-party/parallel-hashmap/parallel_hashmap/phmap.h"
 
 namespace networks_cpp {
     // forward declaration
@@ -69,18 +73,28 @@ namespace networks_cpp {
             typename Hash = std::hash<K>,
             typename Pred = std::equal_to<K>,
             typename Alloc = std::allocator<std::pair<const K, V>>>
-    using HashMap = std::unordered_map<K, V, Hash, Pred, Alloc>;
-    template<typename K,
-            typename V,
-            typename Compare = std::less<K>,
-            typename Alloc = std::allocator<std::pair<const K, V>>>
-    using TreeMap = std::map<K, V, Compare, Alloc>;
+    using StdHashMap = std::unordered_map<K, V, Hash, Pred, Alloc>;
+
+    // use phmap::flat_hash_map as default hash map.
+    // don't use phmap::parallel_flat_hash_map because its memory usage is too large and inefficient.
+    template<typename K, typename V>
+    using HashMap = phmap::flat_hash_map<K, V>;
 
     template<typename K,
             typename Hash = std::hash<K>,
             typename Pred = std::equal_to<K>,
             typename Alloc = std::allocator<K>>
-    using HashSet = std::unordered_set<K, Hash, Pred, Alloc>;
+    using StdHashSet = std::unordered_set<K, Hash, Pred, Alloc>;
+
+    // use phmap::flat_hash_set as default hash set.
+    template<typename K>
+    using HashSet = phmap::flat_hash_set<K>;
+
+    template<typename K,
+            typename V,
+            typename Compare = std::less<K>,
+            typename Alloc = std::allocator<std::pair<const K, V>>>
+    using TreeMap = std::map<K, V, Compare, Alloc>;
 
     template<typename K,
             typename Compare = std::less<K>,

@@ -4,3 +4,6 @@
 [submodule "third-party/google/benchmark"]
 	path = third-party/google/benchmark
 	url = https://github.com/google/benchmark.git
+[submodule "third-party/parallel-hashmap"]
+	path = third-party/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap.git
