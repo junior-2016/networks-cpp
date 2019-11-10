@@ -1,8 +1,9 @@
 ## networks-cpp
 ### build & run
 ```bash
+$ git clone https://github.com/junior-2016/networks-cpp.git
 $ cd networks-cpp
-$ mkdir build
+$ mkdir build && cd build
 $ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ make -j n 
 (n is thread number)

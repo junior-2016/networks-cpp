@@ -13,8 +13,6 @@ namespace networks_cpp {
         directed = 2,
     };
 
-    // TODO 图的多重邻接链表其实可以整合为一个列表,用 compressed sparse row(csr) 表示.
-    //  其实就是稀疏邻接矩阵的csr表示. 所以优化点在于稀疏矩阵csr表示的优化,可以弄到多核cpu(intel mkl)/GPU(CUDA),可以考虑用开源的库处理.
     template<typename Vertex,
             typename WeightType,
             auto type>
@@ -22,6 +20,11 @@ namespace networks_cpp {
         static_assert(std::is_same_v<decltype(type), GraphType>);
         static_assert((type == GraphType::undirected) || (type == GraphType::directed));
     private:
+        /**
+         * 这里用的是HashTable存储(HTS hash table storage format);
+         * 并且提供了接口支持 HTS -> CSR (compressed sparse row) 的切换.
+         *   TODO:后续可能提供 template argument 来控制 HTS/CSR/CSC/COO 的自由切换
+         */
         using Adjacency_list_type = HashMap<Vertex, WeightType>;
         using iterator = typename Adjacency_list_type::iterator;
         using const_iterator = typename Adjacency_list_type::const_iterator;
@@ -212,10 +215,34 @@ namespace networks_cpp {
             return out;
         }
 
-        // TODO: 转到cuda稀疏矩阵
-//        af::array convert_to_csr_matrix() {
-//
-//        }
+        // Transfer internal Hash Table Storage to array fire sparse matrix
+        // (use cuda/opencl backend)
+        // 参考: https://stackoverflow.com/questions/49867065/arrayfire-sparse-matrix-issues
+        // TODO: 这里只针对HTS存储的单向边数据转成CSR,没有针对无向图的处理.
+        //      后续有可能添加,但要看后续的算法是否需要对完整的邻接矩阵进行复杂计算(计算需要考虑对称的部分)
+        af::array convert_to_csr_storage() {
+            Vector<int> rows;
+            Vector<int> cols;
+            Vector<float> weights;
+            rows.reserve(n + 1);
+            cols.reserve(m);
+            weights.reserve(m);
+            int step = 0;
+            for (size_t row = 0; row < adjacency_matrix.size(); ++row) {
+                const auto &adj = adjacency_matrix[row];
+                rows.emplace_back(step);
+                step += adj.size();
+                std::for_each(adj.begin(), adj.end(), [&](const auto &item) {
+                    cols.emplace_back(vertices[item.first]);
+                    weights.emplace_back(item.second);
+                });
+            }
+            rows.emplace_back(step);
+            return af::sparse(n, n, af::array(weights.size(), weights.data()),
+                              af::array(rows.size(), rows.data()),
+                              af::array(cols.size(), cols.data()),
+                              af::storage::AF_STORAGE_CSR);
+        }
 
     private:
         size_t n, m; // n: vertex number; m: edge number.

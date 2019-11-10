@@ -42,13 +42,16 @@ if (NOT GIT_SUBMOD_RESULT EQUAL "0")
     message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
 endif ()
 
+# find arrayfire library
+find_package(ArrayFire)
+
 # source file path
 file(GLOB self_source_file "src/*.cpp" "src/include/*.h")
 file(GLOB test_source_file "test/*.cpp" "test/*.h")
 file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
 # require libraries
-set(REQUIRE_LIBS -pthread)
+set(REQUIRE_LIBS -pthread ArrayFire::afopencl)
 
 # benchmark/gtest setting
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)

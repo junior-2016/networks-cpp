@@ -28,6 +28,8 @@
 #include <random>
 #include <limits>
 
+// TODO: use parallelism-ts to accelerate some algorithm (such as std::for_each).
+//  GCC had implemented it by TBB backend.
 #ifdef USE_CXX_PARALLISM_TS
 
 #include <execution> // C++17 parallelism TS header,only be implemented in libstdc++(GCC 9)
@@ -44,7 +46,7 @@
 #include <cassert>
 
 // third-party include
-
+#include <arrayfire.h>
 
 namespace networks_cpp {
     // forward declaration
