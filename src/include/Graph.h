@@ -13,6 +13,42 @@ namespace networks_cpp {
         directed = 2,
     };
 
+    // 利用 WeightWrapper<WeightType> 覆盖Graph里面的 WeightType,从而实现对重边权重的记录
+    // (自环边根据顶点相同就可以确认,无需记录多余信息)
+    template<typename WeightType>
+    class WeightWrapper {
+        //TODO: Vector <WeightType> weights; 记录下所有重边权重还是有点多余开销,所以这里暂时只记录重边个数,不记录各条重边的权重。
+        size_t weights_size;     // 重边个数
+        WeightType total_weight; // 重边权重和
+    public:
+        // 不使用 explicit 关键字就可以实现 WeightType 向 WeightWrapper<> 的隐式转换
+        // explicit
+        WeightWrapper(const WeightType &weight) : weights_size(1), total_weight(weight) {
+            // weights.push_back(weight);
+        }
+
+        inline WeightWrapper<WeightType> &operator+=(const WeightType &weight) { // 重写+操作实现重边的权重和
+            // weights.push_back(weight);
+            total_weight += weight;
+            weights_size++;
+            return *this;
+        }
+
+        // 重边个数
+        [[nodiscard]] constexpr inline size_t size() const {
+            return weights_size;
+        }
+
+        inline WeightType weight() const {
+            return total_weight;
+        }
+
+        friend std::ostream &operator<<(std::ostream &out, const WeightWrapper<WeightType> &weightWrapper) {
+            out << weightWrapper.total_weight;
+            return out;
+        }
+    };
+
     template<typename Vertex,
             typename WeightType,
             auto type>
@@ -28,7 +64,7 @@ namespace networks_cpp {
          *   TODO:需要提供访问 neighbors/degree(in/out) 等信息的接口.
          *   TODO:暴露加顶点接口; 提供删除点/边的接口.
          */
-        using Adjacency_list_type = HashMap<Vertex, WeightType>;
+        using Adjacency_list_type = HashMap<Vertex, WeightWrapper<WeightType>>;
         using iterator = typename Adjacency_list_type::iterator;
         using const_iterator = typename Adjacency_list_type::const_iterator;
         using VertexIdType = uint32_t;
@@ -67,7 +103,7 @@ namespace networks_cpp {
          * @return
          */
         inline WeightType get_weight_arc_without_check(VertexIdType begin_id, const Vertex &end) const {
-            return adjacency_matrix[begin_id][end];
+            return adjacency_matrix[begin_id][end].weight();
         }
 
         /**
@@ -78,7 +114,7 @@ namespace networks_cpp {
          * @return
          */
         inline WeightType get_weight_arc_with_check(VertexIdType begin_id, const Vertex &end) const {
-            if (auto itr = get_iterator(begin_id, end);itr != std::nullopt) return (*(itr.value())).second;
+            if (auto itr = get_iterator(begin_id, end);itr != std::nullopt) return (*(itr.value())).second.weight();
             return 0;
         }
 
@@ -285,7 +321,7 @@ namespace networks_cpp {
                 step += adj.size();
                 std::for_each(adj.begin(), adj.end(), [&](const auto &item) {
                     cols.emplace_back(vertices[item.first]);
-                    weights.emplace_back(item.second);
+                    weights.emplace_back(item.second.weight());
                 });
             }
             rows.emplace_back(step);
