@@ -51,7 +51,17 @@ file(GLOB test_source_file "test/*.cpp" "test/*.h")
 file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
 # require libraries
-set(REQUIRE_LIBS -pthread ArrayFire::afopencl)
+set(REQUIRE_LIBS -pthread)
+OPTION(USE_CUDA_BACKEND "use cuda backend for arrayfire" OFF)
+OPTION(USE_OPENCL_BACKEND "use opencl backend for arrayfire" OFF)
+set(USE_CUDA_BACKEND ON)
+if (USE_CUDA_BACKEND)
+    set(REQUIRE_LIBS ${REQUIRE_LIBS} ArrayFire::afcuda)
+elseif (USE_OPENCL_BACKEND)
+    set(REQUIRE_LIBS ${REQUIRE_LIBS} ArrayFire::afopencl)
+else ()
+    set(REQUIRE_LIBS ${REQUIRE_LIBS} ArrayFire::afcpu)
+endif ()
 
 # benchmark/gtest setting
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
@@ -67,6 +77,8 @@ set(BENCHMARK ON)
 # unset all camke option from cache
 unset(TEST CACHE)
 unset(BENCHMARK CACHE)
+unset(USE_CUDA_BACKEND CACHE)
+unset(USE_OPENCL_BACKEND CACHE)
 
 # create executable
 if (TEST)

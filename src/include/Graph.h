@@ -24,6 +24,9 @@ namespace networks_cpp {
          * 这里用的是HashTable存储(HTS hash table storage format);
          * 并且提供了接口支持 HTS -> CSR (compressed sparse row) 的切换.
          *   TODO:后续可能提供 template argument 来控制 HTS/CSR/CSC/COO 的自由切换
+         *   TODO:对于自环边/多重边,可能需要提供一些标记信息和权重信息(或者考虑修改Adjacency_list<V,Weight>为Adjacency_list<V,weight_list>)..
+         *   TODO:需要提供访问 neighbors/degree(in/out) 等信息的接口.
+         *   TODO:暴露加顶点接口; 提供删除点/边的接口.
          */
         using Adjacency_list_type = HashMap<Vertex, WeightType>;
         using iterator = typename Adjacency_list_type::iterator;
@@ -121,7 +124,7 @@ namespace networks_cpp {
         /**
          * 添加顶点并返回顶点的编号
          */
-        inline VertexIdType add_vertex(const Vertex &v) {
+        inline VertexIdType add_vertex_internal(const Vertex &v) {
             auto ret = vertices.try_emplace(v, global_vertex_id);
             if (ret.second == true) { // 插入新顶点,需要创建新的Adjacency list,同时更新global_vertex_id;
                 adjacency_matrix.emplace_back(Adjacency_list_type{});
@@ -143,11 +146,59 @@ namespace networks_cpp {
         }
 
         void add_edge(const Vertex &begin, const Vertex &end, WeightType weight) {
-            auto begin_id = add_vertex(begin);
-            auto end_id = add_vertex(end);
+            auto begin_id = add_vertex_internal(begin);
+            auto end_id = add_vertex_internal(end);
             m++;
             n = vertices.size();
             insert_edge(begin, end, begin_id, end_id, weight);
+        }
+
+        void add_vertex(const Vertex &v) {
+            add_vertex_internal(v);
+            n = vertices.size();
+        }
+
+        /**
+         * 从图中删除一条边(只删除边,对应的点不删除).如果删除失败不需要任何错误返回信息(因为边本来就不在图上).
+         * unordered_map.erase(key_t) return number of elements erased. For unordered_map, return value will only be 1 or 0.
+         * TODO: 存在无法修改边数的问题,因为重边信息之前已经丢失了(需要修改前面的代码)
+         */
+        void remove_edge(const Vertex &begin, const Vertex &end) {
+            if constexpr (type == GraphType::directed) {
+                if (auto begin_v = vertices.find(begin); begin_v != vertices.end()) {
+                    adjacency_matrix[(*begin_v).second].erase(end);
+                    // TODO 如何修改边数...
+                }
+            } else { // 无向图
+                if (auto begin_v = vertices.find(begin); begin_v != vertices.end()) {
+                    if (adjacency_matrix[(*begin_v).second].erase(end) == 0) { // begin -> end方向删除失败,尝试删除反方向的数据
+                        if (auto end_v = vertices.find(end); end_v != vertices.end()) {
+                            adjacency_matrix[(*end_v).second].erase(begin);
+                            // TODO 修改边数 m
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * clear_vertex_data 并不是完全的删除顶点,仅仅清空它在邻接矩阵的数据,但是依旧保留这个顶点.
+         * 因为顶点采用了全局id编码的方式,所以这里的方法不能将adjacency_matrix中vertex那一行完全删除,如果完全删除,编码都需要更改.
+         * 采取的策略是保留删除的 vertex 在 vertices 的 id, 仅仅清空它在 adjacency_matrix 的数据,
+         * 但是依然保留 vertex 在 adjacency_matrix 那一行的位置, 而且这样做删除的速度将非常快.
+         * TODO: 同样存在无法修改边数的问题,因为重边信息之前已经丢失了(需要修改前面的代码)
+         * @param v
+         */
+        void clear_vertex_data(const Vertex &v) {
+            if (auto begin_v = vertices.find(v); begin_v != vertices.end()) {
+                adjacency_matrix[(*begin_v).second] = Adjacency_list_type{}; // 清空数据
+
+                std::for_each(adjacency_matrix.begin(), adjacency_matrix.end(), [&](auto &adj_list) {
+                    adj_list.erase(v); // 其他指向v的数据一并删除
+                });
+
+                // TODO: 修改边数
+            }
         }
 
         WeightType get_weight(const Vertex &begin, const Vertex &end) const {
@@ -249,6 +300,7 @@ namespace networks_cpp {
         std::string graph_name;
         VertexIdType global_vertex_id;
         HashMap <Vertex, VertexIdType> vertices;
+        // adjacency_matrix使用vector而不是list,因为需要频繁随机访问(list不支持随机访问,单次访问需要O(N)时间)
         Vector <Adjacency_list_type> adjacency_matrix;
     };
 }
