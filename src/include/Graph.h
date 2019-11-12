@@ -8,9 +8,14 @@
 #include "networks-cpp.h"
 
 namespace networks_cpp {
+    // TODO: 修改策略:
+    //   1. 无向图全数据存储(不再一半存储) => 或者提供一个可选的策略(用wrapper处理,一个策略是全数据采集,一个策略只收集一半边)
+    //     对于 重边/无重边              => 提供一个可选的策略    (用Wrapper来处理,并且更改数据结构,对于接受重边的应该收集所有重边的权重..)
+    //   2. 不储存degree,degree可以通过访问 顶点->Id->adj_list->adj_list.len() 得到,无需额外存储(需要存储的应该是全图degree的和)
     enum class GraphType : uint32_t {
         undirected = 1,
         directed = 2,
+       // TODO bi_directed = 3 // A bi_directed type is that a directed graph store its adj_list both in-vertex and out-vertex
     };
 
     // 利用 WeightWrapper<WeightType> 覆盖Graph里面的 WeightType,从而实现对重边权重的记录
@@ -21,9 +26,7 @@ namespace networks_cpp {
         size_t weights_size;     // 重边个数
         WeightType total_weight; // 重边权重和
     public:
-        // 不使用 explicit 关键字就可以实现 WeightType 向 WeightWrapper<> 的隐式转换
-        // explicit
-        WeightWrapper(const WeightType &weight) : weights_size(1), total_weight(weight) {
+        explicit WeightWrapper(const WeightType &weight) : weights_size(1), total_weight(weight) {
             // weights.push_back(weight);
         }
 
@@ -49,6 +52,62 @@ namespace networks_cpp {
         }
     };
 
+    /**
+     * 储存顶点的度(无权重时)/顶点的强度(有权重时),但是计算是统一的.
+     */
+    template<typename WeightType, auto type>
+    struct DegreeListWrapper {
+        static_assert(std::is_same_v<decltype(type), GraphType>);
+        static_assert((type == GraphType::directed) || (type == GraphType::undirected));
+    };
+
+    template<typename WeightType>
+    struct DegreeListWrapper<WeightType, GraphType::undirected> {
+        using DegreeList = Vector<WeightType>;
+        DegreeList degree_list;
+
+        inline void emplace_empty() {
+            degree_list.emplace_back(WeightType{0});
+        }
+
+        inline void update_degree(size_t id, const WeightType &weight) {
+            degree_list[id] += weight;
+        }
+    };
+
+    enum class DegreeDirection : uint32_t {
+        in = 1,
+        out = 2
+    };
+
+    template<typename WeightType>
+    struct DegreeListWrapper<WeightType, GraphType::directed> {
+        using DegreeList = Vector <Pair<WeightType, WeightType>>; // (degree_in,degree_out)
+        DegreeList degree_list;
+
+        inline void emplace_empty() {
+            degree_list.emplace_back(WeightType{0}, WeightType{0});
+        }
+
+        /**
+         * when declare:
+         *    using DegreeListWrapper_t = DegreeListWrapper<WeightType,GraphType>;(need to be inferred when compile-time)
+         *    DegreeListWrapper_t degree_list_wrapper;
+         * then call update_degree method should add template prefix:
+         *    degree_list_wrapper.template update_degree<DegreeDirection::in>(id,weight);
+         */
+        template<auto direction>
+        inline void update_degree(size_t id, const WeightType &weight) {
+            static_assert(std::is_same_v<decltype(direction), DegreeDirection>);
+            static_assert((direction == DegreeDirection::in) || (direction == DegreeDirection::out));
+            if constexpr (direction == DegreeDirection::in) {
+                degree_list[id].first += weight;
+            } else {
+                degree_list[id].second += weight;
+            }
+        }
+    };
+
     template<typename Vertex,
             typename WeightType,
             auto type>
@@ -68,6 +127,16 @@ namespace networks_cpp {
         using iterator = typename Adjacency_list_type::iterator;
         using const_iterator = typename Adjacency_list_type::const_iterator;
         using VertexIdType = uint32_t;
+        using DegreeListWrapper_t =  DegreeListWrapper<WeightType, type>;
+
+    private:
+        size_t n, m; // n: vertex number; m: edge number.
+        std::string graph_name;
+        VertexIdType global_vertex_id;
+        HashMap <Vertex, VertexIdType> vertices;
+        // adjacency_matrix使用vector而不是list,因为需要频繁随机访问(list不支持随机访问,单次访问需要O(N)时间)
+        Vector <Adjacency_list_type> adjacency_matrix;
+        DegreeListWrapper_t degree_list_wrapper;
 
         /**
          * 获得 adjacency_matrix[begin][end] 的迭代器
@@ -164,6 +233,7 @@ namespace networks_cpp {
             auto ret = vertices.try_emplace(v, global_vertex_id);
             if (ret.second == true) { // 插入新顶点,需要创建新的Adjacency list,同时更新global_vertex_id;
                 adjacency_matrix.emplace_back(Adjacency_list_type{});
+                degree_list_wrapper.emplace_empty();
                 global_vertex_id++;
             }
             return (*ret.first).second;
@@ -179,6 +249,7 @@ namespace networks_cpp {
                 : n(0), m(0), graph_name(std::move(graph_name)), global_vertex_id(0) {
             vertices.reserve(vertex_reserve_number);
             adjacency_matrix.reserve(vertex_reserve_number);
+            degree_list_wrapper.degree_list.reserve(vertex_reserve_number);
         }
 
         void add_edge(const Vertex &begin, const Vertex &end, WeightType weight) {
@@ -186,6 +257,15 @@ namespace networks_cpp {
             auto end_id = add_vertex_internal(end);
             m++;
             n = vertices.size();
+            if constexpr (type == GraphType::directed) { // begin_id->end_id;
+                // 注意这里在调用update_degree时要加上template前缀.因为degree_list_wrapper自身的类型是需要编译时推断得到的,
+                // 同时degree_list_wrapper这里调用的方法还需要模板参数,因此需要加上template前缀才能通过编译.
+                degree_list_wrapper.template update_degree<DegreeDirection::out>(begin_id, weight);
+                degree_list_wrapper.template update_degree<DegreeDirection::in>(end_id, weight);
+            } else {  // begin_id - end_id
+                degree_list_wrapper.update_degree(begin_id, weight);
+                degree_list_wrapper.update_degree(end_id, weight);
+            }
             insert_edge(begin, end, begin_id, end_id, weight);
         }
 
@@ -198,11 +278,14 @@ namespace networks_cpp {
          * 从图中删除一条边(只删除边,对应的点不删除).如果删除失败不需要任何错误返回信息(因为边本来就不在图上).
          * unordered_map.erase(key_t) return number of elements erased. For unordered_map, return value will only be 1 or 0.
          * TODO: 存在无法修改边数的问题,因为重边信息之前已经丢失了(需要修改前面的代码)
+         * TODO: 这里同时需要修改degree
+         * TODO: 如果这里有重边,应该将所有重边(包括其信息)删除,并且 m -= 重边数量
          */
         void remove_edge(const Vertex &begin, const Vertex &end) {
             if constexpr (type == GraphType::directed) {
                 if (auto begin_v = vertices.find(begin); begin_v != vertices.end()) {
                     adjacency_matrix[(*begin_v).second].erase(end);
+
                     // TODO 如何修改边数...
                 }
             } else { // 无向图
@@ -258,6 +341,16 @@ namespace networks_cpp {
             }
         }
 
+        [[nodiscard]] double mean_degree() const {
+            // std::for_each_parallel_sum(degree_list) / n.
+            return 0;
+        }
+
+        [[nodiscard]] double density_for_simple_network() const {
+            // TODO: 这里也很难计算因为一开始已经默认处理了multi-edge和self-loop.
+            return 0;
+        }
+
         [[nodiscard]] inline constexpr size_t vertex_number() const { return n; }
 
         [[nodiscard]] inline constexpr size_t edge_number() const { return m; }
@@ -285,6 +378,17 @@ namespace networks_cpp {
                         out << "\t\t" << begin_v.first << "<->" << end_v.first << " weight:" << end_v.second << "\n";
                     }
                 });
+            });
+
+            out << "\tdegree: \n";
+            std::for_each(g.vertices.begin(), g.vertices.end(), [&](const auto &v) {
+                if constexpr (type == GraphType::directed) {
+                    out << "\t\t" << v.first
+                        << " in:" << g.degree_list_wrapper.degree_list[v.second].first
+                        << " out:" << g.degree_list_wrapper.degree_list[v.second].second << "\n";
+                } else {
+                    out << "\t\t" << v.first << " : " << g.degree_list_wrapper.degree_list[v.second] << "\n";
+                }
             });
 
             out << "\tadjacency_matrix: \n";
@@ -330,14 +434,6 @@ namespace networks_cpp {
                               af::array(cols.size(), cols.data()),
                               af::storage::AF_STORAGE_CSR);
         }
-
-    private:
-        size_t n, m; // n: vertex number; m: edge number.
-        std::string graph_name;
-        VertexIdType global_vertex_id;
-        HashMap <Vertex, VertexIdType> vertices;
-        // adjacency_matrix使用vector而不是list,因为需要频繁随机访问(list不支持随机访问,单次访问需要O(N)时间)
-        Vector <Adjacency_list_type> adjacency_matrix;
     };
 }
 #endif //NETWORKS_CPP_GRAPH_H

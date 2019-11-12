@@ -5,6 +5,8 @@
 #include "../third-party/google/googletest/googletest/include/gtest/gtest.h"
 #include "../src/include/Graph.h"
 
+#include <boost/graph/graph_traits.hpp>
+#include <boost/graph/adjacency_list.hpp>
 //template<auto type>
 //void set_edge(networks_cpp::Graph<std::string, int, type> &graph) {
 //    graph.add_edge("v1", "v2", 1);
@@ -52,6 +54,20 @@ TEST(GraphTest, GraphCreate) {
 TEST(GraphTest, GraphToCSR) {
     af::array csr_matrix = g.convert_to_csr_storage();
     std::cout << csr_matrix.dims() << "\n";
+}
+
+TEST(GraphTest, TestBoostGraph) {
+    using namespace boost;
+    using edge_weight_property = property<edge_weight_t, WeightType>;
+    using graph = adjacency_list<multisetS, vecS, directedS, no_property, edge_weight_property>;
+    std::uniform_int_distribution<Vertex> dis(0, v_size - 1);  // random select vertex
+    std::uniform_int_distribution<WeightType> dis_w(1, 100);        // weights
+    std::random_device device;
+    graph g_;
+    for (size_t i = 0; i < e_size; i++) {
+        auto start = dis(device), end = dis(device);
+        add_edge(start, end, dis_w(device), g_);
+    }
 }
 
 //TEST(ArrayFireTest, ArrayFireBackendInfo) {

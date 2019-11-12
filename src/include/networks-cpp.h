@@ -67,6 +67,8 @@ namespace networks_cpp {
     using Array = std::array<T, num>;
     template<typename T>
     using List = std::list<T>;
+    template<typename T1, typename T2>
+    using Pair = std::pair<T1, T2>;
 
     template<typename K,
             typename V,

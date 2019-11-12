@@ -42,9 +42,6 @@ if (NOT GIT_SUBMOD_RESULT EQUAL "0")
     message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
 endif ()
 
-# find arrayfire library
-find_package(ArrayFire)
-
 # source file path
 file(GLOB self_source_file "src/*.cpp" "src/include/*.h")
 file(GLOB test_source_file "test/*.cpp" "test/*.h")
@@ -52,8 +49,13 @@ file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
 # require libraries
 set(REQUIRE_LIBS -pthread)
+
+# find arrayfire library
+find_package(ArrayFire)
 OPTION(USE_CUDA_BACKEND "use cuda backend for arrayfire" OFF)
 OPTION(USE_OPENCL_BACKEND "use opencl backend for arrayfire" OFF)
+unset(USE_CUDA_BACKEND CACHE)
+unset(USE_OPENCL_BACKEND CACHE)
 set(USE_CUDA_BACKEND ON)
 if (USE_CUDA_BACKEND)
     set(REQUIRE_LIBS ${REQUIRE_LIBS} ArrayFire::afcuda)
@@ -71,14 +73,10 @@ add_subdirectory(third-party/google/googletest)
 # option for test and benchmark
 OPTION(TEST "build test" ON)
 OPTION(BENCHMARK "build benchmark" ON)
-set(TEST ON)
-set(BENCHMARK ON)
-
-# unset all camke option from cache
 unset(TEST CACHE)
 unset(BENCHMARK CACHE)
-unset(USE_CUDA_BACKEND CACHE)
-unset(USE_OPENCL_BACKEND CACHE)
+set(TEST ON)
+set(BENCHMARK ON)
 
 # create executable
 if (TEST)
