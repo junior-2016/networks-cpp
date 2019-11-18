@@ -52,15 +52,12 @@
 // parallel_hashmap use std::hash as default (other choice is absl::Hash but you should include abseil framework)
 #include "../../third-party/parallel-hashmap/parallel_hashmap/phmap.h"
 
+// lemon graph library
+#include <lemon/list_graph.h>
+#include <lemon/static_graph.h>
+#include <lemon/smart_graph.h>
+
 namespace networks_cpp {
-    // forward declaration
-    template<typename Vertex,
-            typename WeightType,
-            auto type>
-    class Graph;
-
-    enum class GraphType : uint32_t;
-
     template<typename T>
     using Vector = std::vector<T>;
     template<typename T, size_t num>

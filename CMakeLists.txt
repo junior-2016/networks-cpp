@@ -48,7 +48,7 @@ file(GLOB test_source_file "test/*.cpp" "test/*.h")
 file(GLOB benchmark_source_file "benchmark/*.cpp" "benchmark/*.h")
 
 # require libraries
-set(REQUIRE_LIBS -pthread)
+set(REQUIRE_LIBS -pthread -lemon)
 
 # find arrayfire library
 find_package(ArrayFire)

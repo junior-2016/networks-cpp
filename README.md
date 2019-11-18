@@ -12,39 +12,48 @@ $ ./networks_cpp_test
 
 ### example
 ```c++
-constexpr size_t v_size = 1000000, e_size = v_size * 10;
-using Vertex = int_fast32_t;
-using WeightType = int_fast8_t;
-networks_cpp::Graph<Vertex, WeightType, networks_cpp::GraphType::undirected> g("large_graph", v_size);
-TEST(GraphTest, GraphCreate) {
-    using namespace networks_cpp;
-    std::uniform_int_distribution<Vertex> dis(0, v_size - 1);  // random select vertex
+TEST(GraphTest, lemon_graph_create) {
+    using namespace lemon;
+    constexpr size_t v_size = 1000000, e_size = v_size * 10;
+    using VertexId   = int;
+    using WeightType = int;
+    using Graph = SmartGraph;
+    using Node = Graph::Node;
+    using WeightMap = Graph::EdgeMap<WeightType>;
+
+    Graph g;
+    WeightMap weights(g);
+    std::vector<Node> vertices;
+
+    std::uniform_int_distribution<VertexId> dis(0, v_size - 1);  // random select vertex
     std::uniform_int_distribution<WeightType> dis_w(1, 100);        // weights
     std::random_device device;
+
+    vertices.reserve(v_size);
+    for (size_t i = 0; i < v_size; i++) {
+        vertices.emplace_back(g.addNode());
+    }
+
     for (size_t i = 0; i < e_size; i++) {
         auto start = dis(device), end = dis(device);
-        g.add_edge(start, end, dis_w(device));
+        auto e = g.addEdge(vertices[start], vertices[end]);
+        weights[e] = dis_w(device);
     }
-}
-
-TEST(GraphTest, GraphToCSR) {
-    af::array csr_matrix = g.convert_to_csr_storage();
-    std::cout << csr_matrix.dims() << "\n";
+    std::cout << "vertex_number:" << countNodes(g) << "\nedge_number:" << countEdges(g) << "\n";
 }
 ```
-result:(memory usage about 340MB ~ 400MB)
+result:(memory usage about 150MB ~ 200MB)
 ```
-[==========] Running 2 tests from 1 test suite.
+[==========] Running 1 test from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 2 tests from GraphTest
-[ RUN      ] GraphTest.GraphCreate
-[       OK ] GraphTest.GraphCreate (10023 ms)
-[ RUN      ] GraphTest.GraphToCSR
-1000000 1000000 1 1
-[       OK ] GraphTest.GraphToCSR (1236 ms)
-[----------] 2 tests from GraphTest (11259 ms total)
+[----------] 1 test from GraphTest
+[ RUN      ] GraphTest.lemon_graph_create
+vertex_number:1000000
+edge_number:10000000
+[       OK ] GraphTest.lemon_graph_create (4900 ms)
+[----------] 1 test from GraphTest (4900 ms total)
 
 [----------] Global test environment tear-down
-[==========] 2 tests from 1 test suite ran. (11259 ms total)
-[  PASSED  ] 2 tests.
+[==========] 1 test from 1 test suite ran. (4900 ms total)
+[  PASSED  ] 1 test.
 ```
