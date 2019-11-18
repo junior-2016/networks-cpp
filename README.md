@@ -1,4 +1,6 @@
 ## networks-cpp
+### require
+- lemon graph library [http://lemon.cs.elte.hu/trac/lemon/wiki/InstallGuide]
 ### build & run
 ```bash
 $ git clone https://github.com/junior-2016/networks-cpp.git
